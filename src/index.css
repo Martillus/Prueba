@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+/* ============================================================
+   XOLARY — Sistema de diseño
+   Paleta: energía limpia (sol cálido) + confianza (navy corporativo)
+   ============================================================ */
+@theme {
+  /* Marca — sol */
+  --color-sun-50: #fff9eb;
+  --color-sun-100: #fef3c7;
+  --color-sun-200: #fde68a;
+  --color-sun-300: #fcd34d;
+  --color-sun-400: #fbbf24;
+  --color-sun-500: #f59e0b;
+  --color-sun-600: #ea8a00;
+  --color-sun-700: #c2620a;
+  --color-sun-800: #92400e;
+
+  /* Marca — naranja acento */
+  --color-flare-400: #fb923c;
+  --color-flare-500: #f97316;
+  --color-flare-600: #ea580c;
+
+  /* Corporativo — navy / carbón */
+  --color-navy-950: #06121f;
+  --color-navy-900: #0b1f33;
+  --color-navy-800: #12314f;
+  --color-navy-700: #1e4b74;
+  --color-navy-600: #2f6da3;
+
+  /* Neutros cálidos */
+  --color-cloud-50: #fbfaf7;
+  --color-cloud-100: #f4f2ec;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  --shadow-glow: 0 0 60px -12px rgba(249, 115, 22, 0.45);
+  --shadow-card: 0 10px 40px -12px rgba(11, 31, 51, 0.18);
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-spin-slow: spin 40s linear infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+
+@layer base {
+  :root {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-cloud-50);
+    color: var(--color-navy-900);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background-color: var(--color-sun-300);
+    color: var(--color-navy-950);
+  }
+  /* Respeta la preferencia de reducir movimiento */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Utilidades de aparición al hacer scroll */
+@layer utilities {
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
