@@ -5,8 +5,12 @@ node_modules
 
 # Build
 dist
+dist-single
 dist-ssr
 *.local
+
+# Artefacto de un solo archivo (generado por el build singlefile)
+xolary-artifact.html
 
 # Logs
 logs
