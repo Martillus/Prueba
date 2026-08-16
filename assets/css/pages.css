@@ -1,0 +1,161 @@
+/* ==========================================================================
+   Bloques propios de páginas interiores
+   ========================================================================== */
+
+/* --- Ficha de servicio: pestaña fija a la izquierda, contenido a la derecha */
+.svc {
+  display: grid;
+  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+  gap: clamp(1.4rem, 4vw, 4rem);
+  padding-block: clamp(2.4rem, 5vw, 4rem);
+  border-top: 1px solid var(--line);
+  align-items: start;
+  scroll-margin-top: 7rem;
+}
+.svc:first-of-type { border-top: 0; }
+.svc__side { position: sticky; top: 7.5rem; }
+.svc__side h2 {
+  font-size: clamp(1.7rem, 3.1vw, 2.6rem);
+  margin-block: .8rem 1rem;
+  transition: color .45s var(--ease);
+}
+.svc:hover .svc__side h2 { color: var(--sello); }
+.svc__side .ref { transition: color .45s var(--ease); }
+.svc:hover .svc__side .ref { color: var(--sello); }
+.svc__body .lead { max-width: 58ch; margin-bottom: 1.6rem; }
+@media (max-width: 880px) {
+  .svc { grid-template-columns: 1fr; }
+  .svc__side { position: static; }
+}
+
+/* --- Lista de comprobación de un expediente */
+.checklist { display: grid; gap: .7rem; }
+.checklist li {
+  display: grid;
+  grid-template-columns: 1.35rem minmax(0, 1fr);
+  gap: .85rem;
+  align-items: start;
+  font-size: var(--fs-sm);
+  padding-block: .35rem;
+}
+.checklist svg { width: 1.35rem; height: 1.35rem; color: var(--jade); margin-top: .1rem; }
+.checklist strong { font-weight: 600; }
+.checklist span { color: var(--muted); }
+.on-ink .checklist span { color: var(--muted-dark); }
+
+/* --- Retrato del equipo */
+.who {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: clamp(1.2rem, 3vw, 2.4rem);
+  align-items: center;
+  padding: clamp(1.2rem, 2.4vw, 1.8rem);
+  background: var(--paper-warm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  transition: border-color .5s var(--ease), transform .5s var(--ease);
+}
+.who:hover { border-color: var(--sello); transform: translateY(-4px); }
+.who h3 { font-size: var(--fs-h3); }
+.who .ref { margin-top: .5rem; }
+.who p { font-size: var(--fs-sm); color: var(--muted); margin-top: .9rem; }
+@media (max-width: 560px) { .who { grid-template-columns: 1fr; } }
+
+/* --- Distribución de temas de las reseñas */
+.bars--topics .bar { grid-template-columns: 8.5rem minmax(0, 1fr) 2.4rem; }
+.bars--topics .bar > b { font-weight: 400; letter-spacing: .14em; text-transform: uppercase; }
+.bars--topics .bar__t i { background: var(--sello); }
+@media (max-width: 480px) { .bars--topics .bar { grid-template-columns: 6.5rem minmax(0, 1fr) 2.2rem; } }
+
+/* --- Reseña completa con la diligencia del despacho */
+.review {
+  padding: clamp(1.4rem, 2.6vw, 2.1rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper-warm);
+  display: grid;
+  gap: 1rem;
+  transition: border-color .5s var(--ease), transform .5s var(--ease);
+}
+.review:hover { border-color: var(--sello); transform: translateY(-4px); }
+.review__head { display: flex; align-items: center; gap: .85rem; }
+.review__stars { display: flex; gap: .18rem; color: var(--oro); margin-left: auto; }
+.review__stars svg { width: .85rem; height: .85rem; }
+.review p { font-size: var(--fs-sm); line-height: 1.7; }
+
+/* --- Glosario */
+.gloss { border-top: 1px solid var(--line); }
+.gloss__item {
+  display: grid;
+  grid-template-columns: minmax(0, .5fr) minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2.5rem);
+  padding-block: clamp(1.1rem, 2vw, 1.5rem);
+  border-bottom: 1px solid var(--line);
+  transition: padding-left .5s var(--ease), background .4s var(--ease);
+}
+.gloss__item:hover { padding-left: .9rem; background: rgba(90, 63, 166, .045); }
+.gloss__t {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: 400;
+  letter-spacing: -.014em;
+  transition: color .4s var(--ease);
+}
+.gloss__item:hover .gloss__t { color: var(--sello); }
+.gloss__d { font-size: var(--fs-sm); color: var(--muted); }
+@media (max-width: 700px) { .gloss__item { grid-template-columns: 1fr; gap: .4rem; } }
+
+/* --- Guía / recurso */
+.guide { display: grid; gap: .8rem; }
+.guide__k {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--sello);
+}
+.guide h3 { font-size: var(--fs-h3); }
+
+/* --- Columna de contacto */
+.contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: start;
+}
+@media (max-width: 900px) { .contact { grid-template-columns: 1fr; } }
+
+/* --- Texto legal corrido */
+.legal { max-width: 68ch; }
+.legal h2 { font-size: var(--fs-h3); margin-top: clamp(2.2rem, 4vw, 3rem); margin-bottom: .8rem; }
+.legal p, .legal li { font-size: var(--fs-sm); color: var(--muted); margin-bottom: .9rem; }
+.legal ul { list-style: none; display: grid; gap: .5rem; }
+.legal li { padding-left: 1.2rem; position: relative; }
+.legal li::before { content: "—"; position: absolute; left: 0; color: var(--sello); }
+.legal a { color: var(--sello); text-decoration: underline; text-underline-offset: 3px; }
+
+/* --- Recorrido con nota fija al margen --- */
+.with-aside {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: start;
+}
+.aside-card {
+  position: sticky;
+  top: 7.5rem;
+  padding: clamp(1.5rem, 2.6vw, 2.1rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper-warm);
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+}
+.aside-card h3 { font-size: var(--fs-h3); }
+.aside-card p { font-size: var(--fs-sm); color: var(--muted); }
+.aside-card .btn { width: 100%; justify-content: center; }
+@media (max-width: 900px) {
+  .with-aside { grid-template-columns: 1fr; }
+  .aside-card { position: static; }
+}

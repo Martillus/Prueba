@@ -1,0 +1,1502 @@
+/* ==========================================================================
+   DESPACHO EXTRA LEGAL — Sistema de diseño "El Expediente"
+   Concepto: el lenguaje visual del documento oficial (sellos de registro,
+   guilloches de visado, folios, referencias mecanografiadas) tratado con
+   calma y lujo editorial. Verdinegro de tarjeta de residencia + papel
+   oficial + violeta de tampón.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. TOKENS
+   -------------------------------------------------------------------------- */
+:root {
+  /* Color */
+  --ink:        #0C2622;   /* verdinegro — tinta principal */
+  --ink-deep:   #061613;   /* fondo oscuro profundo */
+  --ink-soft:   #143A33;   /* verde despacho */
+  --paper:      #ECEFE7;   /* papel oficial */
+  --paper-warm: #F5F6F0;   /* folio */
+  --sello:      #5A3FA6;   /* violeta de tampón de registro */
+  --sello-lift: #8A73D6;   /* violeta sobre fondo oscuro */
+  --jade:       #3E8E78;   /* verde tarjeta — estados afirmativos */
+  --oro:        #C8A24A;   /* latón — solo valoración */
+  --muted:      #6E7F78;   /* texto secundario sobre papel */
+  --muted-dark: #8AA096;   /* texto secundario sobre tinta */
+  --line:       rgba(12, 38, 34, .14);
+  --line-dark:  rgba(236, 239, 231, .16);
+
+  /* Tipografía */
+  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-body:    "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:    "Courier Prime", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --fs-mega:    clamp(3.2rem, 11vw, 9.5rem);
+  --fs-display: clamp(2.5rem, 5.4vw, 4.6rem);
+  --fs-h1:      clamp(2.3rem, 5.4vw, 4.4rem);
+  --fs-h2:      clamp(1.95rem, 4vw, 3.3rem);
+  --fs-h3:      clamp(1.3rem, 2vw, 1.75rem);
+  --fs-lead:    clamp(1.06rem, 1.35vw, 1.32rem);
+  --fs-body:    clamp(1rem, 1.05vw, 1.08rem);
+  --fs-sm:      .9rem;
+  --fs-xs:      .78rem;
+  --fs-ref:     .69rem;
+
+  /* Métrica */
+  --shell:      82rem;
+  --gutter:     clamp(1.25rem, 4vw, 3.25rem);
+  --rail:       clamp(0rem, 6vw, 5.5rem);
+  --sec-y:      clamp(4.5rem, 9vw, 8.5rem);
+  --radius:     2px;      /* el papel no tiene esquinas redondeadas */
+  --radius-lg:  4px;
+
+  /* Movimiento */
+  --ease:       cubic-bezier(.22, 1, .36, 1);
+  --ease-in-out:cubic-bezier(.65, 0, .35, 1);
+  --dur:        .55s;
+}
+
+/* --------------------------------------------------------------------------
+   2. RESET
+   -------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.65;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+[hidden] { display: none !important; }
+img, svg, video { display: block; max-width: 100%; }
+img { height: auto; }
+a { color: inherit; text-decoration: none; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { background: none; border: 0; cursor: pointer; }
+ul, ol { list-style: none; }
+
+:focus-visible {
+  outline: 2px solid var(--sello);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+.on-ink :focus-visible { outline-color: var(--sello-lift); }
+
+::selection { background: var(--sello); color: var(--paper-warm); }
+
+/* --------------------------------------------------------------------------
+   3. TIPOGRAFÍA
+   -------------------------------------------------------------------------- */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 350;
+  line-height: 1.02;
+  letter-spacing: -.022em;
+  font-variation-settings: "opsz" 60;
+  text-wrap: balance;
+}
+h3, h4 { font-weight: 400; line-height: 1.14; letter-spacing: -.014em; font-variation-settings: "opsz" 24; }
+
+p { text-wrap: pretty; }
+
+em, .it { font-style: italic; }
+
+/* Referencia mecanografiada — el hilo conductor del expediente */
+.ref {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: .6em;
+}
+.ref::before {
+  content: "";
+  width: 1.7em; height: 1px;
+  background: currentColor;
+  opacity: .5;
+  flex: none;
+}
+.ref--bare::before { display: none; }
+.on-ink .ref { color: var(--muted-dark); }
+
+.lead {
+  font-size: var(--fs-lead);
+  line-height: 1.58;
+  color: var(--muted);
+  max-width: 46ch;
+}
+.on-ink .lead { color: var(--muted-dark); }
+
+.mono { font-family: var(--font-mono); }
+
+/* Palabra marcada con tinta violeta, como un subrayado de registro */
+.mark {
+  position: relative;
+  font-style: italic;
+  color: inherit;
+  white-space: nowrap;
+}
+.mark::after {
+  content: "";
+  position: absolute;
+  left: -.06em; right: -.06em; bottom: -.01em;
+  height: .24em;
+  background: var(--sello);
+  opacity: .3;
+  transform-origin: left;
+}
+.js .mark::after {
+  transform: scaleX(0);
+  transition: transform 1.1s var(--ease) .25s;
+}
+.is-revealed .mark::after, .mark.is-on::after { transform: scaleX(1); }
+.on-ink .mark::after { background: var(--sello-lift); opacity: .35; }
+
+/* --------------------------------------------------------------------------
+   4. LAYOUT
+   -------------------------------------------------------------------------- */
+.shell {
+  width: 100%;
+  max-width: var(--shell);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.shell--wide { max-width: 96rem; }
+
+.section { padding-block: var(--sec-y); position: relative; }
+.section--tight { padding-block: clamp(3rem, 5vw, 4.5rem); }
+
+.on-ink {
+  background: var(--ink-deep);
+  color: var(--paper);
+  position: relative;
+  overflow: clip;
+}
+.on-ink h1, .on-ink h2, .on-ink h3 { color: var(--paper-warm); }
+
+/* Rejilla de expediente: margen de encuadernación + cuerpo */
+.dossier {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2.75rem);
+  align-items: start;
+}
+.dossier__rail {
+  position: sticky;
+  top: 8rem;
+  align-self: start;
+  display: flex;
+  justify-content: center;
+}
+.dossier__rail span {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--muted);
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  padding-block: 1.2rem;
+  border-block: 1px solid var(--line);
+}
+.on-ink .dossier__rail span { color: var(--muted-dark); border-color: var(--line-dark); }
+@media (max-width: 900px) {
+  .dossier { grid-template-columns: 1fr; }
+  .dossier__rail { display: none; }
+}
+
+/* Cabecera de sección */
+.sec-head { max-width: 54rem; margin-bottom: clamp(2.5rem, 5vw, 4.25rem); }
+.sec-head h2 { font-size: var(--fs-h2); margin-block: 1.1rem .95rem; }
+.sec-head .lead { max-width: 52ch; }
+
+.sec-head--split {
+  max-width: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: end;
+}
+@media (max-width: 820px) { .sec-head--split { grid-template-columns: 1fr; align-items: start; } }
+
+/* --------------------------------------------------------------------------
+   5. TEXTURAS DE DOCUMENTO
+   -------------------------------------------------------------------------- */
+/* Guilloche: el entramado de seguridad de un visado. Se genera en JS. */
+.guilloche {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  color: var(--sello-lift);
+  opacity: .17;
+  animation: spin 190s linear infinite;
+}
+.guilloche--right { top: -26%; right: -22%; width: min(62rem, 82vw); }
+.guilloche--left  { bottom: -34%; left: -26%; width: min(52rem, 76vw); color: var(--jade); opacity: .13; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Fibra del papel */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: .5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.4'/%3E%3C/svg%3E");
+}
+.on-ink.grain::after { opacity: .28; mix-blend-mode: screen; }
+
+/* Pauta reglada, como un impreso */
+.ruled {
+  background-image: repeating-linear-gradient(
+    to bottom, transparent 0, transparent calc(2rem - 1px), var(--line) calc(2rem - 1px), var(--line) 2rem
+  );
+}
+
+.hr {
+  height: 1px;
+  background: var(--line);
+  border: 0;
+  transform-origin: left;
+}
+.on-ink .hr { background: var(--line-dark); }
+
+/* Línea de puntos con guía, como un índice impreso */
+.leader { flex: 1; border-bottom: 1px dotted var(--line); margin-bottom: .35em; }
+
+/* --------------------------------------------------------------------------
+   6. EL SELLO — elemento firma
+   -------------------------------------------------------------------------- */
+.sello {
+  width: clamp(7.5rem, 12vw, 11rem);
+  aspect-ratio: 1;
+  color: var(--sello);
+  position: relative;
+  flex: none;
+}
+.on-ink .sello { color: var(--sello-lift); }
+.sello svg { width: 100%; height: 100%; overflow: visible; }
+.sello__ring { animation: spin 46s linear infinite; transform-origin: 50% 50%; }
+
+/* La impresión: baja, rebota levemente y queda torcida */
+.sello--press { transform: rotate(-8.5deg); }
+.js .sello--press {
+  opacity: 0;
+  transform: scale(2.05) rotate(-22deg);
+}
+.is-revealed .sello--press {
+  animation: press .95s var(--ease) .35s forwards;
+}
+@keyframes press {
+  0%   { opacity: 0; transform: scale(2.05) rotate(-22deg); }
+  55%  { opacity: 1; transform: scale(.94) rotate(-7deg); }
+  75%  { transform: scale(1.03) rotate(-9.5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-8.5deg); }
+}
+
+/* --------------------------------------------------------------------------
+   7. BOTONES
+   -------------------------------------------------------------------------- */
+.btn {
+  --btn-bg: var(--ink);
+  --btn-fg: var(--paper-warm);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .8em;
+  padding: 1.02em 1.75em;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: var(--btn-fg);
+  background: var(--btn-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+  isolation: isolate;
+  transition: color .4s var(--ease), transform .5s var(--ease), box-shadow .5s var(--ease);
+  will-change: transform;
+}
+/* El relleno sube como tinta absorbida por el papel */
+.btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--sello);
+  transform: translateY(101%);
+  transition: transform .5s var(--ease);
+}
+.btn:hover::before, .btn:focus-visible::before { transform: translateY(0); }
+.btn:hover { box-shadow: 0 14px 34px -18px rgba(90, 63, 166, .75); }
+.btn:active { transform: scale(.98); }
+
+.btn__ico { transition: transform .45s var(--ease); }
+.btn:hover .btn__ico { transform: translateX(4px); }
+
+.btn--ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.btn--ghost:hover { --btn-fg: var(--paper-warm); }
+.on-ink .btn--ghost { --btn-fg: var(--paper); box-shadow: inset 0 0 0 1px var(--line-dark); }
+.on-ink .btn--ghost::before { background: var(--paper); }
+.on-ink .btn--ghost:hover { --btn-fg: var(--ink); }
+
+.btn--light { --btn-bg: var(--paper-warm); --btn-fg: var(--ink); }
+.btn--light:hover { --btn-fg: var(--paper-warm); }
+
+.btn--wide { width: 100%; justify-content: center; }
+
+/* Enlace con subrayado que se redibuja */
+.link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .5em;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  padding-bottom: .28em;
+}
+.link::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px;
+  background: currentColor;
+  transform-origin: right;
+  transition: transform .45s var(--ease);
+}
+.link:hover::after { transform: scaleX(0); transform-origin: right; }
+.link:hover .btn__ico { transform: translateX(4px); }
+
+/* --------------------------------------------------------------------------
+   8. CABECERA
+   -------------------------------------------------------------------------- */
+/* Todas las páginas abren sobre un bloque de tinta, así que la cabecera nace
+   en claro y se pasa a tinta cuando el cristal se posa sobre el papel. */
+.head {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 90;
+  padding-block: clamp(.9rem, 1.6vw, 1.4rem);
+  color: var(--paper);
+  transition: color .45s var(--ease), padding .5s var(--ease);
+}
+.head.is-stuck { color: var(--ink); }
+.head .brand__sub { color: var(--muted-dark); transition: color .45s var(--ease); }
+.head.is-stuck .brand__sub { color: var(--muted); }
+.head .brand__glyph { color: var(--sello-lift); }
+.head.is-stuck .brand__glyph { color: var(--sello); }
+.head:not(.is-stuck) .nav__link[aria-current="page"] { color: var(--sello-lift); }
+.head:not(.is-stuck) .burger { box-shadow: inset 0 0 0 1px var(--line-dark); }
+.head:not(.is-stuck) .btn { --btn-bg: var(--paper-warm); --btn-fg: var(--ink); }
+.head:not(.is-stuck) .btn:hover { --btn-fg: var(--paper-warm); }
+.head::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--paper) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  border-bottom: 1px solid var(--line);
+  opacity: 0;
+  transition: opacity .5s var(--ease);
+}
+.head.is-stuck { padding-block: .7rem; }
+.head.is-stuck::before { opacity: 1; }
+.head.is-hidden { transform: translateY(-104%); transition: transform .5s var(--ease); }
+
+.head__in {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+/* Membrete */
+.brand { display: flex; align-items: center; gap: .8rem; }
+.brand__glyph {
+  width: 2.35rem; height: 2.35rem;
+  flex: none;
+  color: var(--sello);
+  transition: transform .6s var(--ease);
+}
+.brand:hover .brand__glyph { transform: rotate(-12deg) scale(1.06); }
+.brand__name {
+  font-family: var(--font-display);
+  font-size: 1.14rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -.015em;
+  display: block;
+}
+.brand__sub {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-top: .3rem;
+}
+
+.nav { display: flex; align-items: center; gap: clamp(.5rem, 1.4vw, 1.45rem); }
+.nav__link {
+  position: relative;
+  font-size: .855rem;
+  font-weight: 500;
+  padding: .45rem .1rem;
+  overflow: hidden;
+  display: block;
+}
+/* Al pasar, la palabra se sustituye por su copia — como cambiar de folio */
+.nav__link span {
+  display: block;
+  transition: transform .45s var(--ease);
+}
+.nav__link span::after {
+  content: attr(data-t);
+  position: absolute;
+  left: 0; top: 100%;
+  width: 100%;
+}
+.nav__link:hover span, .nav__link:focus-visible span { transform: translateY(-100%); }
+.nav__link[aria-current="page"] { color: var(--sello); font-weight: 600; }
+.nav__link[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: .1rem;
+  width: 100%; height: 1px;
+  background: currentColor;
+}
+
+.head__cta { display: flex; align-items: center; gap: .75rem; }
+.head__cta .btn { padding: .78em 1.3em; font-size: .82rem; }
+
+.burger {
+  display: none;
+  width: 2.9rem; height: 2.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.burger i {
+  display: block;
+  width: 1.15rem; height: 1px;
+  background: currentColor;
+  position: relative;
+  transition: transform .45s var(--ease), background .2s;
+}
+.burger i::before, .burger i::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%; height: 1px;
+  background: currentColor;
+  transition: transform .45s var(--ease);
+}
+.burger i::before { top: -6px; }
+.burger i::after  { top: 6px; }
+.is-menu .burger i { background: transparent; }
+.is-menu .burger i::before { transform: translateY(6px) rotate(45deg); }
+.is-menu .burger i::after  { transform: translateY(-6px) rotate(-45deg); }
+
+@media (max-width: 1140px) {
+  .nav, .head__cta .btn { display: none; }
+  .burger { display: inline-flex; }
+}
+
+/* Menú móvil a pantalla completa */
+.menu {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  background: var(--ink-deep);
+  color: var(--paper);
+  padding: 7rem var(--gutter) 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path .7s var(--ease);
+  overflow-y: auto;
+  visibility: hidden;
+}
+.is-menu .menu { clip-path: inset(0 0 0 0); visibility: visible; }
+.menu__list { display: flex; flex-direction: column; gap: .1rem; }
+.menu__list a {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 9vw, 3.4rem);
+  font-weight: 300;
+  line-height: 1.16;
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding-block: .18em;
+  border-bottom: 1px solid var(--line-dark);
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .6s var(--ease), transform .6s var(--ease), color .3s;
+}
+.menu__list a small {
+  font-family: var(--font-mono);
+  font-size: .62rem;
+  letter-spacing: .2em;
+  color: var(--muted-dark);
+}
+.menu__list a:hover { color: var(--sello-lift); }
+.is-menu .menu__list a { opacity: 1; transform: none; }
+.menu__foot { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: center; }
+
+/* Barra de tramitación — el progreso de lectura leído como un expediente */
+.progress {
+  position: fixed;
+  inset: auto 0 0;
+  height: 2px;
+  z-index: 95;
+  background: var(--sello);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+/* --------------------------------------------------------------------------
+   9. HERO
+   -------------------------------------------------------------------------- */
+.hero {
+  position: relative;
+  padding-top: clamp(7rem, 13vh, 10rem);
+  padding-bottom: clamp(2.5rem, 5vw, 4rem);
+  min-height: min(100svh, 62rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  isolation: isolate;
+}
+.hero__grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1.32fr) minmax(0, .88fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: center;
+}
+@media (max-width: 980px) { .hero__grid { grid-template-columns: 1fr; } }
+
+.hero__title {
+  font-size: var(--fs-display);
+  font-weight: 300;
+  line-height: .97;
+  letter-spacing: -.03em;
+  font-variation-settings: "opsz" 72;
+  margin-block: 1.4rem 1.6rem;
+}
+.hero__title .it { color: var(--sello-lift); }
+.hero .lead { max-width: 50ch; }
+
+.hero__actions { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 1.9rem; }
+
+/* Resolución favorable: la línea de estado del expediente */
+.hero__status {
+  display: inline-flex;
+  align-items: center;
+  gap: .7rem;
+  margin-top: 1.7rem;
+  padding: .55rem .95rem;
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted-dark);
+}
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--jade);
+  flex: none;
+  box-shadow: 0 0 0 0 rgba(62, 142, 120, .55);
+  animation: pulse 2.6s var(--ease-in-out) infinite;
+}
+.dot--off { background: var(--oro); animation: none; }
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(62, 142, 120, .5); }
+  70%  { box-shadow: 0 0 0 11px rgba(62, 142, 120, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(62, 142, 120, 0); }
+}
+
+/* Lámina fotográfica encuadernada */
+.plate {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--ink-soft);
+  box-shadow: 0 40px 90px -50px rgba(0, 0, 0, .85);
+}
+.plate img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.4s var(--ease), filter 1.4s var(--ease);
+  will-change: transform;
+}
+.plate:hover img { transform: scale(1.045); }
+.plate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(6, 22, 19, .72));
+  pointer-events: none;
+}
+.plate__cap {
+  position: absolute;
+  z-index: 2;
+  left: 1.1rem; right: 1.1rem; bottom: .95rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(236, 239, 231, .82);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.plate--tall { aspect-ratio: 4 / 5; }
+.plate--wide { aspect-ratio: 16 / 10; }
+.plate--sq   { aspect-ratio: 1; }
+
+/* Láminas gobernadas por ScrollTrigger: el scroll manda, no la transición.
+   Sin GSAP quedan en su estado final y la página funciona igual. */
+[data-gsap="expand"] { will-change: transform; }
+[data-gsap="expand"] img { will-change: transform; }
+.gsap-on [data-gsap="expand"] img { transition: none; }
+.gsap-on [data-gsap="expand"]:hover img { transform: none; }
+
+.hero__plate { position: relative; }
+.hero__sello {
+  position: absolute;
+  left: -2.8rem; top: -2.4rem;
+  z-index: 3;
+}
+@media (max-width: 980px) { .hero__sello { left: auto; right: -1rem; top: -1.8rem; } }
+
+/* Cinta de trámites */
+.marquee {
+  position: relative;
+  overflow: hidden;
+  border-block: 1px solid var(--line);
+  padding-block: .9rem;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.on-ink .marquee { border-color: var(--line-dark); }
+.marquee__track {
+  display: flex;
+  width: max-content;
+  gap: 2.6rem;
+  animation: slide 46s linear infinite;
+}
+.marquee--rev .marquee__track { animation-direction: reverse; }
+.marquee--fast .marquee__track { animation-duration: 30s; }
+.marquee:hover .marquee__track { animation-play-state: paused; }
+.marquee__track > * {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted-dark);
+  display: flex;
+  align-items: center;
+  gap: 2.6rem;
+  white-space: nowrap;
+}
+.marquee__track > *::after { content: "◦"; color: var(--sello-lift); }
+@keyframes slide { to { transform: translateX(-50%); } }
+
+/* --------------------------------------------------------------------------
+   10. ÍNDICE DE SERVICIOS — folios del expediente
+   -------------------------------------------------------------------------- */
+.index { border-top: 1px solid var(--line-dark); }
+.index__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  align-items: center;
+  padding-block: clamp(1.3rem, 2.4vw, 2rem);
+  border-bottom: 1px solid var(--line-dark);
+  transition: padding-left .55s var(--ease), color .4s var(--ease);
+}
+.index__row::before {
+  content: "";
+  position: absolute;
+  inset: 0 -1.5rem;
+  background: rgba(138, 115, 214, .07);
+  opacity: 0;
+  transition: opacity .45s var(--ease);
+  z-index: -1;
+}
+.index__row:hover { padding-left: 1.4rem; }
+.index__row:hover::before { opacity: 1; }
+.index__folio {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .14em;
+  color: var(--muted-dark);
+  transition: color .4s var(--ease);
+}
+.index__row:hover .index__folio { color: var(--sello-lift); }
+.index__name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.6vw, 2.15rem);
+  font-weight: 350;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+}
+.index__desc {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--muted-dark);
+  margin-top: .38rem;
+  max-width: 52ch;
+}
+.index__go {
+  width: 2.9rem; height: 2.9rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px var(--line-dark);
+  transition: background .45s var(--ease), color .45s var(--ease), transform .45s var(--ease);
+  flex: none;
+}
+.index__row:hover .index__go {
+  background: var(--sello-lift);
+  color: var(--ink-deep);
+  transform: rotate(-45deg);
+}
+@media (max-width: 720px) {
+  .index__row { grid-template-columns: 3.4rem minmax(0, 1fr); }
+  .index__go { display: none; }
+}
+
+/* Lámina que sigue al cursor sobre el índice */
+.peek {
+  position: fixed;
+  z-index: 60;
+  width: 18rem;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.86) rotate(-5deg);
+  transition: opacity .4s var(--ease), transform .55s var(--ease);
+  box-shadow: 0 30px 70px -30px rgba(0, 0, 0, .8);
+}
+.peek.is-on { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
+.peek img { width: 100%; height: 100%; object-fit: cover; }
+@media (hover: none), (max-width: 900px) { .peek { display: none; } }
+
+/* --------------------------------------------------------------------------
+   11. TARJETAS
+   -------------------------------------------------------------------------- */
+.card {
+  position: relative;
+  padding: clamp(1.5rem, 2.6vw, 2.2rem);
+  background: var(--paper-warm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  transition: transform .55s var(--ease), box-shadow .55s var(--ease), border-color .45s var(--ease);
+  overflow: hidden;
+}
+.card::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: var(--sello);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .55s var(--ease);
+}
+.card:hover { transform: translateY(-5px); box-shadow: 0 26px 48px -34px rgba(12, 38, 34, .48); }
+.card:hover::after { transform: scaleX(1); }
+.card h3 { font-size: var(--fs-h3); margin-block: .85rem .6rem; }
+.card p { font-size: var(--fs-sm); color: var(--muted); }
+.on-ink .card { background: rgba(236, 239, 231, .045); border-color: var(--line-dark); }
+.on-ink .card p { color: var(--muted-dark); }
+.on-ink .card::after { background: var(--sello-lift); }
+
+.card__num {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .2em;
+  color: var(--sello);
+}
+.on-ink .card__num { color: var(--sello-lift); }
+
+.grid { display: grid; gap: clamp(.85rem, 1.6vw, 1.35rem); }
+.grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 980px) { .grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 860px)  { .grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px)  {
+  .grid--2, .grid--3, .grid--4 { grid-template-columns: 1fr; }
+}
+
+/* --------------------------------------------------------------------------
+   12. CIFRAS
+   -------------------------------------------------------------------------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line-dark);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.stat {
+  background: var(--ink-deep);
+  padding: clamp(1.6rem, 3vw, 2.6rem) clamp(1.2rem, 2vw, 1.8rem);
+  transition: background .5s var(--ease);
+}
+.stat:hover { background: var(--ink-soft); }
+.stat__n {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 5.4vw, 4.4rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -.035em;
+  font-variation-settings: "opsz" 48;
+  color: var(--paper-warm);
+  display: flex;
+  align-items: baseline;
+  gap: .08em;
+}
+.stat__n sup { font-size: .34em; color: var(--sello-lift); top: -1.1em; }
+.stat__l {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .19em;
+  text-transform: uppercase;
+  color: var(--muted-dark);
+  margin-top: 1rem;
+  display: block;
+  max-width: 22ch;
+  line-height: 1.7;
+}
+@media (max-width: 880px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* --------------------------------------------------------------------------
+   13. PROCESO — la línea del expediente
+   -------------------------------------------------------------------------- */
+.path { position: relative; }
+.path__line {
+  position: absolute;
+  left: 1.15rem; top: .5rem; bottom: 3rem;
+  width: 1px;
+  background: var(--line);
+  overflow: hidden;
+}
+.path__line i {
+  position: absolute;
+  inset: 0;
+  background: var(--sello);
+  transform: scaleY(var(--p, 0));
+  transform-origin: top;
+}
+.on-ink .path__line { background: var(--line-dark); }
+.on-ink .path__line i { background: var(--sello-lift); }
+
+.step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.3rem minmax(0, 1fr);
+  gap: clamp(1.2rem, 3vw, 2.6rem);
+  padding-bottom: clamp(2.2rem, 4vw, 3.4rem);
+}
+.step__mark {
+  width: 2.3rem; height: 2.3rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  color: var(--muted);
+  transition: background .5s var(--ease), color .5s var(--ease), box-shadow .5s var(--ease), transform .5s var(--ease);
+}
+.on-ink .step__mark { background: var(--ink-deep); box-shadow: inset 0 0 0 1px var(--line-dark); color: var(--muted-dark); }
+.step.is-revealed .step__mark {
+  background: var(--sello);
+  color: var(--paper-warm);
+  box-shadow: inset 0 0 0 1px var(--sello);
+  transform: scale(1.06);
+}
+.step h3 { font-size: var(--fs-h3); margin-bottom: .5rem; }
+.step p { color: var(--muted); max-width: 56ch; font-size: var(--fs-sm); }
+.on-ink .step p { color: var(--muted-dark); }
+.step__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--sello);
+  display: block;
+  margin-bottom: .55rem;
+}
+.on-ink .step__meta { color: var(--sello-lift); }
+
+/* --------------------------------------------------------------------------
+   14. RESEÑAS
+   -------------------------------------------------------------------------- */
+.score {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2.4rem);
+  flex-wrap: wrap;
+}
+.score__n {
+  font-family: var(--font-display);
+  font-size: clamp(4.2rem, 12vw, 8.5rem);
+  font-weight: 300;
+  line-height: .84;
+  letter-spacing: -.045em;
+  font-variation-settings: "opsz" 72;
+}
+.stars { display: flex; gap: .22rem; color: var(--oro); }
+.stars svg { width: 1.05rem; height: 1.05rem; }
+.js .stars svg { opacity: 0; transform: scale(.4) rotate(-30deg); }
+.is-revealed .stars svg { animation: pop .5s var(--ease) forwards; }
+.stars svg:nth-child(1) { animation-delay: .1s; }
+.stars svg:nth-child(2) { animation-delay: .18s; }
+.stars svg:nth-child(3) { animation-delay: .26s; }
+.stars svg:nth-child(4) { animation-delay: .34s; }
+.stars svg:nth-child(5) { animation-delay: .42s; }
+@keyframes pop { to { opacity: 1; transform: scale(1) rotate(0); } }
+
+/* Distribución de estrellas */
+.bars { display: grid; gap: .5rem; min-width: min(20rem, 100%); }
+.bar { display: grid; grid-template-columns: 1.2rem 1fr 2.6rem; gap: .7rem; align-items: center; font-family: var(--font-mono); font-size: var(--fs-ref); color: var(--muted); }
+.bar__t { height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar__t i { display: block; height: 100%; background: var(--oro); width: var(--w); }
+.js .bar__t i { width: 0; transition: width 1.3s var(--ease); }
+.is-revealed .bar__t i { width: var(--w); }
+
+.quote {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: clamp(1.5rem, 2.6vw, 2.1rem);
+  background: var(--paper-warm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  width: clamp(19rem, 32vw, 27rem);
+  flex: none;
+  white-space: normal;
+  transition: transform .5s var(--ease), border-color .5s var(--ease);
+}
+.quote:hover { transform: translateY(-4px); border-color: var(--sello); }
+.quote p { font-size: var(--fs-sm); line-height: 1.68; }
+.quote__who { display: flex; align-items: center; gap: .7rem; margin-top: auto; }
+.quote__av {
+  width: 2.3rem; height: 2.3rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--paper-warm);
+  font-family: var(--font-display);
+  font-size: .95rem;
+  flex: none;
+}
+.quote__nm { display: block; font-weight: 600; font-size: var(--fs-sm); line-height: 1.3; }
+.quote__dt { display: block; font-family: var(--font-mono); font-size: var(--fs-ref); color: var(--muted); letter-spacing: .1em; }
+
+.rail-x {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.rail-x__track { display: flex; gap: 1rem; width: max-content; animation: slide 64s linear infinite; }
+.rail-x--rev .rail-x__track { animation-direction: reverse; animation-duration: 76s; }
+.rail-x:hover .rail-x__track { animation-play-state: paused; }
+
+/* Respuesta del despacho, como una diligencia al margen */
+.reply {
+  margin-top: .35rem;
+  padding: .85rem 1rem;
+  border-left: 2px solid var(--sello);
+  background: rgba(90, 63, 166, .06);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.reply span {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--sello);
+  display: block;
+  margin-bottom: .35rem;
+}
+.reply p { font-size: var(--fs-xs); color: var(--muted); }
+
+/* --------------------------------------------------------------------------
+   15. ACORDEÓN
+   -------------------------------------------------------------------------- */
+.acc { border-top: 1px solid var(--line); }
+.acc__item { border-bottom: 1px solid var(--line); }
+.on-ink .acc, .on-ink .acc__item { border-color: var(--line-dark); }
+.acc__btn {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-block: clamp(1.1rem, 2vw, 1.6rem);
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 1.8vw, 1.45rem);
+  font-weight: 400;
+  line-height: 1.28;
+  letter-spacing: -.012em;
+  transition: color .35s var(--ease), padding-left .5s var(--ease);
+}
+.acc__btn:hover { color: var(--sello); padding-left: .5rem; }
+.on-ink .acc__btn:hover { color: var(--sello-lift); }
+.acc__sign {
+  position: relative;
+  width: 1.6rem; height: 1.6rem;
+  flex: none;
+  margin-top: .2rem;
+}
+.acc__sign::before, .acc__sign::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: .85rem; height: 1px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+  transition: transform .5s var(--ease), opacity .35s;
+}
+.acc__sign::after { transform: translate(-50%, -50%) rotate(90deg); }
+.acc__btn[aria-expanded="true"] { color: var(--sello); }
+.on-ink .acc__btn[aria-expanded="true"] { color: var(--sello-lift); }
+.acc__btn[aria-expanded="true"] .acc__sign::after { transform: translate(-50%, -50%) rotate(0); opacity: 0; }
+.acc__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .55s var(--ease);
+}
+.acc__panel > div { overflow: hidden; }
+.acc__panel.is-open { grid-template-rows: 1fr; }
+.acc__panel p {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  max-width: 68ch;
+  padding-bottom: 1.5rem;
+}
+.on-ink .acc__panel p { color: var(--muted-dark); }
+
+/* --------------------------------------------------------------------------
+   16. FORMULARIO
+   -------------------------------------------------------------------------- */
+.form { display: grid; gap: 1.6rem; }
+.form__row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.6rem; }
+@media (max-width: 640px) { .form__row { grid-template-columns: 1fr; } }
+
+.field { position: relative; display: block; }
+.field__l {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .19em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: .55rem;
+}
+.field__i {
+  width: 100%;
+  padding: .8rem 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  font-size: var(--fs-body);
+  transition: border-color .4s var(--ease);
+}
+.field__i:focus { outline: none; }
+.field__i::placeholder { color: color-mix(in srgb, var(--muted) 65%, transparent); }
+select.field__i { appearance: none; cursor: pointer; }
+textarea.field__i { resize: vertical; min-height: 7rem; }
+/* Subrayado que se traza al enfocar */
+.field::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 100%; height: 1px;
+  background: var(--sello);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .5s var(--ease);
+}
+.field:focus-within::after { transform: scaleX(1); }
+.field--err::after { background: #B5443F; transform: scaleX(1); }
+.field__err {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .1em;
+  color: #B5443F;
+  margin-top: .45rem;
+  display: none;
+}
+.field--err .field__err { display: block; }
+
+.check { display: flex; gap: .8rem; align-items: flex-start; font-size: var(--fs-xs); color: var(--muted); cursor: pointer; }
+.check input { margin-top: .2rem; accent-color: var(--sello); width: 1rem; height: 1rem; flex: none; }
+
+/* --------------------------------------------------------------------------
+   17. DATOS DE CONTACTO
+   -------------------------------------------------------------------------- */
+.info { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+.info__row {
+  background: var(--paper-warm);
+  padding: clamp(1.1rem, 2vw, 1.5rem);
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: baseline;
+  transition: background .4s var(--ease);
+}
+.info__row:hover { background: var(--paper); }
+.info__k { font-family: var(--font-mono); font-size: var(--fs-ref); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.info__v { font-size: var(--fs-sm); font-weight: 500; }
+.info__v a:hover { color: var(--sello); }
+@media (max-width: 560px) { .info__row { grid-template-columns: 1fr; gap: .3rem; } }
+
+/* Horario */
+.hours { display: grid; gap: .1rem; }
+.hours li { display: flex; align-items: baseline; gap: .6rem; padding-block: .55rem; font-size: var(--fs-sm); border-bottom: 1px solid var(--line); }
+.on-ink .hours li { border-color: var(--line-dark); }
+.hours li.is-today { color: var(--sello); font-weight: 600; }
+.on-ink .hours li.is-today { color: var(--sello-lift); }
+.hours b { font-weight: 500; min-width: 6.5rem; }
+.hours span { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: .06em; }
+
+/* Mapa estilizado */
+.map {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--line-dark);
+  background: var(--ink-deep);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 2rem;
+}
+.map__grid {
+  position: absolute;
+  inset: -20%;
+  background-image:
+    linear-gradient(var(--line-dark) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-dark) 1px, transparent 1px);
+  background-size: 3.2rem 3.2rem;
+  transform: perspective(700px) rotateX(56deg) translateY(-6%);
+  opacity: .55;
+  animation: drift 34s linear infinite;
+}
+@keyframes drift { to { background-position: 3.2rem 3.2rem; } }
+.map__pin { position: relative; z-index: 2; display: grid; justify-items: center; gap: .9rem; }
+.map__ping { width: 14px; height: 14px; border-radius: 50%; background: var(--sello-lift); position: relative; }
+.map__ping::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid var(--sello-lift);
+  animation: ping 2.4s var(--ease-in-out) infinite;
+}
+@keyframes ping { 0% { transform: scale(.6); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
+
+/* --------------------------------------------------------------------------
+   18. PIE
+   -------------------------------------------------------------------------- */
+.foot { background: var(--ink-deep); color: var(--paper); padding-top: clamp(3.5rem, 7vw, 6rem); position: relative; overflow: clip; }
+.foot__top { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: clamp(1.5rem, 4vw, 3rem); padding-bottom: clamp(2.5rem, 5vw, 4rem); }
+@media (max-width: 900px) { .foot__top { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .foot__top { grid-template-columns: 1fr; } }
+.foot h4 { font-family: var(--font-mono); font-size: var(--fs-ref); letter-spacing: .2em; text-transform: uppercase; color: var(--muted-dark); font-weight: 400; margin-bottom: 1.2rem; }
+.foot__links { display: grid; gap: .55rem; }
+.foot__links a { font-size: var(--fs-sm); color: var(--paper); opacity: .8; transition: opacity .3s, transform .4s var(--ease), color .3s; display: inline-block; }
+.foot__links a:hover { opacity: 1; color: var(--sello-lift); transform: translateX(5px); }
+
+/* Membrete gigante al pie */
+.foot__word {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 13vw, 12rem);
+  font-weight: 300;
+  line-height: .82;
+  letter-spacing: -.05em;
+  font-variation-settings: "opsz" 144;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(236, 239, 231, .3);
+  padding-block: clamp(1.5rem, 3vw, 2.5rem);
+  border-top: 1px solid var(--line-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  transition: color .8s var(--ease);
+}
+.foot__word:hover { color: rgba(236, 239, 231, .07); }
+.foot__bar { display: flex; flex-wrap: wrap; gap: 1rem 2rem; justify-content: space-between; align-items: center; padding-block: 1.6rem; border-top: 1px solid var(--line-dark); font-family: var(--font-mono); font-size: var(--fs-ref); letter-spacing: .13em; text-transform: uppercase; color: var(--muted-dark); }
+.foot__bar a:hover { color: var(--sello-lift); }
+
+.totop {
+  position: fixed;
+  right: clamp(1rem, 2.5vw, 2rem);
+  bottom: clamp(1rem, 2.5vw, 2rem);
+  z-index: 70;
+  width: 3rem; height: 3rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--paper-warm);
+  opacity: 0;
+  transform: translateY(14px) scale(.85);
+  pointer-events: none;
+  transition: opacity .45s var(--ease), transform .45s var(--ease), background .35s;
+}
+.totop.is-on { opacity: 1; transform: none; pointer-events: auto; }
+.totop:hover { background: var(--sello); }
+
+/* --------------------------------------------------------------------------
+   19. ETIQUETAS Y VARIOS
+   -------------------------------------------------------------------------- */
+.tags { display: flex; flex-wrap: wrap; gap: .5rem; }
+.tag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  padding: .45em .85em;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--muted);
+  transition: border-color .4s var(--ease), color .4s var(--ease), transform .4s var(--ease);
+}
+.tag:hover { border-color: var(--sello); color: var(--sello); transform: translateY(-2px); }
+.on-ink .tag { border-color: var(--line-dark); color: var(--muted-dark); }
+.on-ink .tag:hover { border-color: var(--sello-lift); color: var(--sello-lift); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .5rem .9rem;
+  border-radius: 99px;
+  background: rgba(90, 63, 166, .09);
+  color: var(--sello);
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.on-ink .badge { background: rgba(138, 115, 214, .14); color: var(--sello-lift); }
+
+.pill-list { display: grid; gap: .8rem; }
+.pill-list li { display: flex; gap: .85rem; align-items: flex-start; font-size: var(--fs-sm); }
+.pill-list svg { width: 1.15rem; height: 1.15rem; color: var(--jade); flex: none; margin-top: .22rem; }
+
+/* Nota legal al margen */
+.note {
+  font-family: var(--font-mono);
+  font-size: var(--fs-ref);
+  line-height: 1.9;
+  letter-spacing: .04em;
+  color: var(--muted);
+  border-left: 1px solid var(--line);
+  padding-left: 1.1rem;
+  max-width: 62ch;
+}
+.on-ink .note { color: var(--muted-dark); border-color: var(--line-dark); }
+
+/* Cabecera de página interior */
+.phead {
+  padding-top: clamp(8rem, 15vh, 11rem);
+  padding-bottom: clamp(2.5rem, 5vw, 4rem);
+  position: relative;
+  isolation: isolate;
+}
+.phead h1 { font-size: var(--fs-h1); margin-block: 1.2rem 1.1rem; font-variation-settings: "opsz" 72; font-weight: 300; max-width: 17ch; }
+.phead .lead { max-width: 48ch; }
+.phead__in { position: relative; z-index: 2; }
+.crumb { display: flex; gap: .55rem; align-items: center; font-family: var(--font-mono); font-size: var(--fs-ref); letter-spacing: .18em; text-transform: uppercase; color: var(--muted-dark); }
+.crumb a:hover { color: var(--sello-lift); }
+
+/* Bloque de llamada final */
+.cta { position: relative; text-align: center; display: grid; justify-items: center; gap: 1.4rem; }
+.cta h2 { font-size: var(--fs-h2); max-width: 20ch; }
+.cta .lead { max-width: 52ch; }
+.cta__row { display: flex; flex-wrap: wrap; gap: .8rem; justify-content: center; margin-top: .6rem; }
+
+/* --------------------------------------------------------------------------
+   20. CURSOR, TRANSICIÓN Y CARGA
+   -------------------------------------------------------------------------- */
+.cursor, .cursor-ring {
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 999;
+  pointer-events: none;
+  border-radius: 50%;
+  mix-blend-mode: difference;
+  opacity: 0;
+  transition: opacity .3s;
+}
+.cursor { width: 6px; height: 6px; background: var(--paper); margin: -3px 0 0 -3px; }
+.cursor-ring {
+  width: 34px; height: 34px;
+  margin: -17px 0 0 -17px;
+  border: 1px solid rgba(236, 239, 231, .65);
+  transition: opacity .3s, width .35s var(--ease), height .35s var(--ease), margin .35s var(--ease), background .35s;
+}
+.has-cursor .cursor, .has-cursor .cursor-ring { opacity: 1; }
+.has-cursor.is-hover .cursor-ring { width: 58px; height: 58px; margin: -29px 0 0 -29px; background: rgba(236, 239, 231, .12); }
+@media (hover: none), (pointer: coarse) { .cursor, .cursor-ring { display: none; } }
+
+/* Cortina de paso entre folios.
+   En reposo vive fuera de pantalla: solo sube al pulsar un enlace interno,
+   e inmediatamente después la página cambia. Nunca puede quedarse tapando
+   el contenido si una animación no llega a completarse. */
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--ink-deep);
+  transform: translateY(100%);
+  pointer-events: none;
+}
+.curtain.is-in { animation: cIn .45s var(--ease-in-out) forwards; }
+@keyframes cIn { to { transform: translateY(0); } }
+
+/* Portada de carga.
+   Solo existe si hay JavaScript, y se retira sola por CSS aunque main.js
+   nunca llegue a ejecutarse: una portada atascada dejaría el sitio a oscuras. */
+.boot { display: none; }
+.js .boot {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: var(--ink-deep);
+  display: grid;
+  place-items: center;
+  gap: 1.4rem;
+  transition: opacity .6s var(--ease), visibility .6s;
+  animation: bootOut .5s var(--ease) 1.9s forwards;
+}
+@keyframes bootOut { to { opacity: 0; visibility: hidden; } }
+.boot__in { display: grid; justify-items: center; gap: 1.5rem; text-align: center; }
+.boot__bar { width: min(16rem, 50vw); height: 1px; background: var(--line-dark); overflow: hidden; }
+.boot__bar i { display: block; height: 100%; background: var(--sello-lift); width: 0; animation: load 1.1s var(--ease) forwards; }
+@keyframes load { to { width: 100%; } }
+.boot.is-done { opacity: 0; visibility: hidden; }
+
+/* --------------------------------------------------------------------------
+   21. REVELADOS AL DESPLAZAR
+   Todo el estado oculto vive bajo .js: sin JavaScript la página se sirve
+   entera y legible, sin nada que dependa de un observador para aparecer.
+   -------------------------------------------------------------------------- */
+.js [data-anim] { opacity: 0; will-change: transform, opacity; }
+.js [data-anim="up"]    { transform: translateY(34px); }
+.js [data-anim="down"]  { transform: translateY(-26px); }
+.js [data-anim="left"]  { transform: translateX(-38px); }
+.js [data-anim="right"] { transform: translateX(38px); }
+.js [data-anim="in"]    { transform: scale(.94); }
+.js [data-anim="mask"]  { opacity: 1; clip-path: inset(0 0 101% 0); }
+.js [data-anim="plate"] { opacity: 1; clip-path: inset(101% 0 0 0); }
+
+[data-anim].is-revealed {
+  opacity: 1;
+  transform: none;
+  clip-path: inset(0 0 0 0);
+  transition:
+    opacity .95s var(--ease) var(--d, 0s),
+    transform 1.05s var(--ease) var(--d, 0s),
+    clip-path 1.15s var(--ease) var(--d, 0s);
+}
+
+/* Título por líneas: cada línea sube tras su máscara */
+.lines span { display: block; overflow: hidden; }
+.lines span > i { display: block; font-style: inherit; }
+.js .lines span > i {
+  transform: translateY(105%);
+  transition: transform 1.05s var(--ease) var(--d, 0s);
+}
+.lines.is-revealed span > i { transform: none; }
+
+/* --------------------------------------------------------------------------
+   22. MOVIMIENTO REDUCIDO
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+  [data-anim] { opacity: 1 !important; transform: none !important; clip-path: none !important; }
+  .lines span > i { transform: none !important; }
+  .js .sello--press { opacity: 1 !important; transform: rotate(-8.5deg) !important; }
+  .cursor, .cursor-ring, .peek, .curtain, .boot { display: none !important; }
+  .marquee__track, .rail-x__track { animation: none !important; }
+  .bar__t i { width: var(--w) !important; }
+  .js .stars svg { opacity: 1 !important; transform: none !important; }
+}
+
+/* --------------------------------------------------------------------------
+   23. UTILIDADES
+   -------------------------------------------------------------------------- */
+.stack   { display: grid; gap: 1.1rem; justify-items: start; }
+.stack-s { display: grid; gap: .55rem; }
+.row     { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+.mt-s { margin-top: 1.2rem; }
+.mt-m { margin-top: 2.4rem; }
+.mt-l { margin-top: clamp(3rem, 6vw, 5rem); }
+.center { text-align: center; }
+.sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip {
+  position: absolute; left: 1rem; top: -4rem;
+  z-index: 500; background: var(--ink); color: var(--paper-warm);
+  padding: .8rem 1.2rem; border-radius: var(--radius);
+  transition: top .3s var(--ease);
+}
+.skip:focus { top: 1rem; }
