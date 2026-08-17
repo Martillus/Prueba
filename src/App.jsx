@@ -1,6 +1,6 @@
 import useReveal from './hooks/useReveal'
 import Navbar from './components/Navbar'
-import Hero from './components/Hero'
+import CarHero from './components/CarHero'
 import Services from './components/Services'
 import Batteries from './components/Batteries'
 import Gallery from './components/Gallery'
@@ -15,7 +15,7 @@ export default function App() {
     <div className="min-h-screen bg-cloud-50">
       <Navbar />
       <main>
-        <Hero />
+        <CarHero />
         <Services />
         <Batteries />
         <Gallery />
