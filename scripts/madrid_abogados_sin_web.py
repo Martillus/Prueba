@@ -1,19 +1,27 @@
 #!/usr/bin/env python3
 """
-Extrae los bufetes de abogados del distrito Centro de Madrid y genera un Excel
-con los que NO tienen pagina web.
+Extrae los bufetes de abogados de Madrid y genera un Excel con los que NO tienen
+pagina web.
 
-Fuentes soportadas:
-  --source google    Google Places API (New). Refleja lo que se ve en Google Maps.
-                     Requiere clave en GOOGLE_MAPS_API_KEY o --api-key.
-  --source osm       OpenStreetMap via Overpass API. Gratis y sin clave, pero la
-                     cobertura de despachos pequenos es menor que la de Google.
+Areas (--area):
+  m30      Todo el interior de la M-30, ~48 km2 (por defecto).
+  centro   Solo el distrito Centro.
+
+Fuentes (--source):
+  google   Google Places API (New). Refleja lo que se ve en Google Maps.
+           Requiere clave en GOOGLE_MAPS_API_KEY o --api-key.
+  osm      OpenStreetMap via Overpass. Gratis y sin clave, pero cubre bastantes
+           menos despachos pequenos que Google.
+
+El barrido es adaptativo: empieza con celdas de 800 m y solo subdivide las que se
+saturan (la API tope a 20 resultados por llamada), afinando hasta 100 m en zonas
+densas. Unas 460 llamadas para toda la M-30 con cobertura completa.
 
 Uso tipico:
     export GOOGLE_MAPS_API_KEY="AIza..."
-    python3 scripts/madrid_abogados_sin_web.py --source google -o bufetes.xlsx
+    python3 scripts/madrid_abogados_sin_web.py --area m30 -o bufetes.xlsx --cache progreso.json
 
-    python3 scripts/madrid_abogados_sin_web.py --source osm -o bufetes.xlsx
+    python3 scripts/madrid_abogados_sin_web.py --area m30 --source osm -o bufetes.xlsx
 """
 
 from __future__ import annotations
@@ -56,6 +64,45 @@ CENTRO_POLYGON = [
     (40.4200, -3.7190),  # Bailen / Palacio Real
 ]
 
+# ---------------------------------------------------------------------------
+# Area 2: interior de la M-30.
+#
+# Poligono aproximado que traza el anillo de la M-30: Nudo Norte arriba,
+# Avenida de la Paz por el este, Nudo Sur abajo, el Manzanares / Madrid Rio por
+# el oeste y la Avenida de la Ilustracion cerrando por el noroeste.
+# Abarca Centro y buena parte de Chamberi, Salamanca, Retiro, Arganzuela,
+# Moncloa, Tetuan y Chamartin.
+# ---------------------------------------------------------------------------
+M30_POLYGON = [
+    (40.4735, -3.6890),  # Nudo Norte
+    (40.4720, -3.6700),  # M-30 noreste
+    (40.4600, -3.6620),  # Avenida de la Paz norte
+    (40.4480, -3.6600),  # Avenida de la Paz
+    (40.4380, -3.6620),  # Ventas
+    (40.4270, -3.6620),  # O'Donnell
+    (40.4130, -3.6650),  # Avenida del Mediterraneo
+    (40.4020, -3.6720),  # Puente de Vallecas
+    (40.3900, -3.6790),  # M-30 sureste
+    (40.3840, -3.6900),  # Nudo Sur / Legazpi
+    (40.3830, -3.7000),  # Manzanares sur
+    (40.3880, -3.7110),  # Marques de Vadillo
+    (40.3960, -3.7180),  # Puente de Toledo
+    (40.4080, -3.7260),  # Avenida de Portugal
+    (40.4230, -3.7300),  # Puente de los Franceses
+    (40.4350, -3.7280),  # Ciudad Universitaria
+    (40.4480, -3.7280),  # Puerta de Hierro
+    (40.4650, -3.7220),  # Avenida de la Ilustracion oeste
+    (40.4780, -3.7100),  # Avenida de la Ilustracion norte
+    (40.4790, -3.6980),  # M-30 noroeste
+]
+
+AREAS = {
+    "centro": (CENTRO_POLYGON,
+               "Distrito Centro de Madrid (Palacio, Embajadores, Cortes, "
+               "Justicia, Universidad, Sol)"),
+    "m30": (M30_POLYGON, "Interior de la M-30 de Madrid"),
+}
+
 LAT_M = 111_320.0  # metros por grado de latitud
 
 
@@ -84,30 +131,41 @@ def polygon_bbox(poly: list[tuple[float, float]]) -> tuple[float, float, float, 
     return min(lats), min(lons), max(lats), max(lons)
 
 
-def build_grid(poly: list[tuple[float, float]], spacing_m: float) -> list[tuple[float, float]]:
-    """Rejilla de centros de busqueda que cubre el poligono."""
+def cell_intersects(clat: float, clon: float, half_lat: float, half_lon: float,
+                    poly: list[tuple[float, float]]) -> bool:
+    """True si la celda toca el poligono (test por centro, esquinas y vertices)."""
+    probes = [
+        (clat, clon),
+        (clat + half_lat, clon + half_lon), (clat + half_lat, clon - half_lon),
+        (clat - half_lat, clon + half_lon), (clat - half_lat, clon - half_lon),
+        (clat + half_lat, clon), (clat - half_lat, clon),
+        (clat, clon + half_lon), (clat, clon - half_lon),
+    ]
+    if any(point_in_polygon(a, b, poly) for a, b in probes):
+        return True
+    # el poligono puede atravesar la celda sin que ninguna sonda caiga dentro
+    return any(abs(vlat - clat) <= half_lat and abs(vlon - clon) <= half_lon
+               for vlat, vlon in poly)
+
+
+def initial_cells(poly: list[tuple[float, float]], cell_m: float) -> list[tuple[float, float, float]]:
+    """Celdas cuadradas de lado cell_m que cubren el poligono: (lat, lon, lado)."""
     min_lat, min_lon, max_lat, max_lon = polygon_bbox(poly)
     mid_lat = (min_lat + max_lat) / 2
-    d_lat = spacing_m / LAT_M
-    d_lon = spacing_m / lon_m(mid_lat)
+    d_lat = cell_m / LAT_M
+    d_lon = cell_m / lon_m(mid_lat)
 
-    # margen de una celda para que los circulos cubran tambien el borde
-    points = []
-    lat = min_lat - d_lat
-    while lat <= max_lat + d_lat:
-        lon = min_lon - d_lon
-        while lon <= max_lon + d_lon:
-            # nos quedamos con la celda si su centro o alguna esquina cae dentro
-            corners = [
-                (lat, lon),
-                (lat + d_lat / 2, lon), (lat - d_lat / 2, lon),
-                (lat, lon + d_lon / 2), (lat, lon - d_lon / 2),
-            ]
-            if any(point_in_polygon(a, b, poly) for a, b in corners):
-                points.append((lat, lon))
+    cells = []
+    lat = min_lat
+    while lat < max_lat + d_lat:
+        lon = min_lon
+        while lon < max_lon + d_lon:
+            clat, clon = lat + d_lat / 2, lon + d_lon / 2
+            if cell_intersects(clat, clon, d_lat / 2, d_lon / 2, poly):
+                cells.append((clat, clon, cell_m))
             lon += d_lon
         lat += d_lat
-    return points
+    return cells
 
 
 # ---------------------------------------------------------------------------
@@ -155,45 +213,97 @@ def _post_json(url: str, payload: dict, headers: dict, retries: int = 4) -> dict
     raise SystemExit(f"Google Places no responde tras {retries} intentos: {last_err}")
 
 
-def fetch_google(api_key: str, poly, spacing_m: float, radius_m: float,
-                 verbose: bool = True) -> dict[str, dict]:
+def fetch_google(api_key: str, poly, start_cell_m: float, min_cell_m: float,
+                 verbose: bool = True, cache_path: str = "") -> dict[str, dict]:
+    """Barrido adaptativo.
+
+    Empieza con celdas grandes y subdivide en 4 solo las que se saturan (la API
+    devuelve como mucho 20 resultados por llamada). Asi las zonas densas como
+    Centro o Salamanca se afinan y las vacias no gastan llamadas.
+    """
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": api_key,
         "X-Goog-FieldMask": FIELD_MASK,
     }
-    grid = build_grid(poly, spacing_m)
-    if verbose:
-        print(f"[google] {len(grid)} celdas de busqueda (radio {radius_m:.0f} m)", file=sys.stderr)
 
     found: dict[str, dict] = {}
-    saturated = 0
-    for i, (lat, lon) in enumerate(grid, 1):
+    done: set[str] = set()
+
+    if cache_path and os.path.exists(cache_path):
+        with open(cache_path, encoding="utf-8") as fh:
+            cached = json.load(fh)
+        found = cached.get("places", {})
+        done = set(cached.get("done", []))
+        if verbose:
+            print(f"[google] reanudando: {len(found)} despachos, "
+                  f"{len(done)} celdas ya hechas", file=sys.stderr)
+
+    def save():
+        if cache_path:
+            tmp = cache_path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump({"places": found, "done": sorted(done)}, fh)
+            os.replace(tmp, cache_path)
+
+    stack = initial_cells(poly, start_cell_m)
+    if verbose:
+        print(f"[google] {len(stack)} celdas iniciales de {start_cell_m:.0f} m", file=sys.stderr)
+
+    calls = 0
+    unresolved = 0
+    while stack:
+        clat, clon, size = stack.pop()
+        key = f"{clat:.6f},{clon:.6f},{size:.0f}"
+        if key in done:
+            continue
+
+        radius = size * 0.7072  # media diagonal: el circulo cubre el cuadrado
         payload = {
             "includedTypes": ["lawyer"],
             "maxResultCount": 20,
             "languageCode": "es",
             "regionCode": "ES",
             "locationRestriction": {
-                "circle": {"center": {"latitude": lat, "longitude": lon}, "radius": radius_m}
+                "circle": {"center": {"latitude": clat, "longitude": clon},
+                           "radius": min(radius, 50000.0)}
             },
         }
         data = _post_json(PLACES_URL, payload, headers)
+        calls += 1
         places = data.get("places", [])
-        if len(places) >= 20:
-            saturated += 1
         for p in places:
-            pid = p.get("id")
-            if pid:
-                found[pid] = p
-        if verbose and i % 10 == 0:
-            print(f"[google] celda {i}/{len(grid)} - {len(found)} despachos unicos",
-                  file=sys.stderr)
-        time.sleep(0.06)
+            if p.get("id"):
+                found[p["id"]] = p
 
-    if verbose and saturated:
-        print(f"[google] AVISO: {saturated} celdas devolvieron el maximo de 20 resultados. "
-              f"Reduce --spacing/--radius para no perder despachos.", file=sys.stderr)
+        if len(places) >= 20:
+            half = size / 2
+            if half >= min_cell_m:
+                # celda saturada: la partimos en cuatro y reintentamos
+                q_lat = (half / 2) / LAT_M
+                q_lon = (half / 2) / lon_m(clat)
+                for dlat in (q_lat, -q_lat):
+                    for dlon in (q_lon, -q_lon):
+                        stack.append((clat + dlat, clon + dlon, half))
+            else:
+                unresolved += 1
+
+        done.add(key)
+        if calls % 25 == 0:
+            save()
+            if verbose:
+                print(f"[google] {calls} llamadas - {len(found)} despachos unicos "
+                      f"- {len(stack)} celdas en cola", file=sys.stderr)
+        time.sleep(0.05)
+
+    save()
+    if verbose:
+        print(f"[google] terminado: {calls} llamadas, {len(found)} despachos unicos",
+              file=sys.stderr)
+        if unresolved:
+            print(f"[google] AVISO: {unresolved} celdas seguian saturadas en el tamano "
+                  f"minimo ({min_cell_m:.0f} m). Baja --min-cell para afinar mas.",
+                  file=sys.stderr)
     return found
 
 
@@ -232,21 +342,21 @@ OVERPASS_ENDPOINTS = [
     "https://overpass.private.coffee/api/interpreter",
 ]
 
-OVERPASS_QUERY = """
-[out:json][timeout:120];
-area["name"="Madrid"]["admin_level"="7"]->.m;
-area["name"="Centro"]["admin_level"="9"](area.m)->.c;
+def overpass_query(poly: list[tuple[float, float]]) -> str:
+    coords = " ".join(f"{lat} {lon}" for lat, lon in poly)
+    return f"""
+[out:json][timeout:180];
 (
-  nwr["office"="lawyer"](area.c);
-  nwr["amenity"="lawyer"](area.c);
-  nwr["shop"="lawyer"](area.c);
+  nwr["office"="lawyer"](poly:"{coords}");
+  nwr["amenity"="lawyer"](poly:"{coords}");
+  nwr["shop"="lawyer"](poly:"{coords}");
 );
 out center tags;
 """
 
 
-def fetch_osm(verbose: bool = True) -> list[dict]:
-    data_enc = urllib.parse.urlencode({"data": OVERPASS_QUERY}).encode()
+def fetch_osm(poly, verbose: bool = True) -> list[dict]:
+    data_enc = urllib.parse.urlencode({"data": overpass_query(poly)}).encode()
     last_err = None
     for endpoint in OVERPASS_ENDPOINTS:
         if verbose:
@@ -355,18 +465,23 @@ def write_xlsx(sin_web: list[dict], con_web: list[dict], path: str, meta: dict) 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--area", choices=sorted(AREAS), default="m30",
+                    help="zona a barrer (default m30)")
     ap.add_argument("--source", choices=["google", "osm"], default="google")
     ap.add_argument("--api-key", default=os.environ.get("GOOGLE_MAPS_API_KEY", ""))
     ap.add_argument("-o", "--output", default="bufetes_madrid_centro_sin_web.xlsx")
-    ap.add_argument("--spacing", type=float, default=180.0,
-                    help="separacion de la rejilla en metros (default 180)")
-    ap.add_argument("--radius", type=float, default=140.0,
-                    help="radio de cada busqueda en metros (default 140)")
+    ap.add_argument("--cell", type=float, default=800.0,
+                    help="lado de la celda inicial en metros (default 800)")
+    ap.add_argument("--min-cell", type=float, default=100.0,
+                    help="lado minimo al subdividir, en metros (default 100)")
+    ap.add_argument("--cache", default="",
+                    help="fichero de progreso para poder reanudar")
     ap.add_argument("--json-out", default="", help="volcado crudo de los resultados")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
 
     verbose = not args.quiet
+    poly, zona_desc = AREAS[args.area]
 
     if args.source == "google":
         if not args.api_key:
@@ -374,18 +489,19 @@ def main() -> int:
                   "Necesitas la Places API (New) habilitada en tu proyecto de Google Cloud.",
                   file=sys.stderr)
             return 2
-        raw = fetch_google(args.api_key, CENTRO_POLYGON, args.spacing, args.radius, verbose)
+        raw = fetch_google(args.api_key, poly, args.cell, args.min_cell,
+                           verbose, args.cache)
         records = [normalize_google(p) for p in raw.values()]
         fuente_desc = "Google Places API (New), tipo 'lawyer'"
     else:
-        elements = fetch_osm(verbose)
+        elements = fetch_osm(poly, verbose)
         records = [normalize_osm(e) for e in elements]
         fuente_desc = "OpenStreetMap / Overpass API (office=lawyer)"
 
     # nos quedamos solo con lo que cae dentro del distrito Centro
     dentro = [r for r in records
               if r["lat"] is not None and r["lon"] is not None
-              and point_in_polygon(r["lat"], r["lon"], CENTRO_POLYGON)]
+              and point_in_polygon(r["lat"], r["lon"], poly)]
     fuera = len(records) - len(dentro)
 
     # descartamos los cerrados definitivamente
@@ -401,7 +517,7 @@ def main() -> int:
             json.dump(records, fh, ensure_ascii=False, indent=2)
 
     meta = {
-        "Zona": "Distrito Centro de Madrid (Palacio, Embajadores, Cortes, Justicia, Universidad, Sol)",
+        "Zona": zona_desc,
         "Fuente de datos": fuente_desc,
         "Fecha de extraccion": time.strftime("%Y-%m-%d %H:%M"),
         "Total localizados en la zona": len(dentro),
@@ -412,7 +528,7 @@ def main() -> int:
         "Criterio 'sin web'": "La ficha del negocio no declara ningun sitio web. "
                               "Puede tener perfil en redes sociales o una web no enlazada; "
                               "conviene validar antes de usarlo comercialmente.",
-        "Rejilla": f"separacion {args.spacing:.0f} m, radio {args.radius:.0f} m",
+        "Barrido": f"adaptativo, celda inicial {args.cell:.0f} m, minima {args.min_cell:.0f} m",
     }
 
     write_xlsx(sin_web, con_web, args.output, meta)
