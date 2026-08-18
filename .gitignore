@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+
+# Salida generada por scripts/madrid_abogados_sin_web.py
+*.xlsx
